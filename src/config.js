@@ -1,6 +1,8 @@
 require('dotenv').config();
 
 const requiredEnvVars = [
+  'FRONTEND_URL',
+  'API_URL',
   'SMTP_HOST',
   'SMTP_PORT',
   'SMTP_USER',
@@ -26,9 +28,10 @@ const toBoolean = (value, fallback = false) => {
 };
 
 const config = {
-  port: toInteger(process.env.PORT, 3001),
+  port: toInteger(process.env.PORT, 4000),
   nodeEnv: process.env.NODE_ENV || 'development',
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  frontendUrl: process.env.FRONTEND_URL,
+  apiUrl: process.env.API_URL,
   smtp: {
     host: process.env.SMTP_HOST,
     port: toInteger(process.env.SMTP_PORT, 465),
