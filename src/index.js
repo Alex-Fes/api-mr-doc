@@ -3,6 +3,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const sendEmailRouter = require('./routes/sendEmail');
+const filesRouter = require('./routes/files');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', sendEmailRouter);
+app.use('/files', filesRouter);
 
 app.use((err, req, res, next) => {
   if (err && err.message === 'CORS_NOT_ALLOWED') {
