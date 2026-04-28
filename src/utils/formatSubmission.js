@@ -10,6 +10,8 @@ const addLine = (lines, label, value) => {
   lines.push(`${label}: ${value}`);
 };
 
+const formatFileLine = (file) => `${file.originalName}: ${file.url}`;
+
 const formatSubmissionEmail = (submission) => {
   const service = submission.service || 'Форма сайта';
   const submittedAt = new Date().toLocaleString('ru-RU', {
@@ -25,7 +27,18 @@ const formatSubmissionEmail = (submission) => {
   addLine(lines, 'IP', submission.ip);
   addLine(lines, 'Дата отправки', submittedAt);
 
-  const htmlRows = lines.map((line) => {
+  const fileLines = Array.isArray(submission.files) && submission.files.length > 0
+    ? submission.files.map(formatFileLine)
+    : [];
+
+  if (fileLines.length > 0) {
+    lines.push('');
+    lines.push('Файлы:');
+    fileLines.forEach((line) => lines.push(`- ${line}`));
+  }
+
+  const detailLines = lines.filter((line) => line && !line.startsWith('- ') && line !== 'Файлы:');
+  const htmlRows = detailLines.map((line) => {
     const separatorIndex = line.indexOf(':');
     const label = line.slice(0, separatorIndex);
     const value = line.slice(separatorIndex + 1).trim();
@@ -38,6 +51,19 @@ const formatSubmissionEmail = (submission) => {
     `;
   }).join('');
 
+  const htmlFiles = fileLines.length > 0
+    ? `
+        <h3 style="margin: 20px 0 8px;">Файлы</h3>
+        <ul style="padding-left: 20px; margin: 0;">
+          ${submission.files.map((file) => `
+            <li style="margin: 0 0 6px;">
+              <a href="${escapeHtml(file.url)}">${escapeHtml(file.originalName)}</a>
+            </li>
+          `).join('')}
+        </ul>
+      `
+    : '';
+
   return {
     subject: `Новая заявка: ${service}`,
     text: lines.join('\n'),
@@ -47,6 +73,7 @@ const formatSubmissionEmail = (submission) => {
         <table style="border-collapse: collapse; min-width: 320px;">
           ${htmlRows}
         </table>
+        ${htmlFiles}
       </div>
     `,
   };

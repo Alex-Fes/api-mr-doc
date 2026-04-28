@@ -12,13 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const toAttachment = (file) => ({
-  filename: file.originalname,
-  content: file.buffer,
-  contentType: file.mimetype,
-});
-
-const sendSubmissionEmail = async (submission, files = []) => {
+const sendSubmissionEmail = async (submission) => {
   const email = formatSubmissionEmail(submission);
 
   return transporter.sendMail({
@@ -28,7 +22,6 @@ const sendSubmissionEmail = async (submission, files = []) => {
     subject: email.subject,
     text: email.text,
     html: email.html,
-    attachments: files.map(toAttachment),
   });
 };
 
