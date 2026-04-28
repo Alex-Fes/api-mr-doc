@@ -47,6 +47,9 @@ const config = {
     maxFileSizeBytes: toInteger(process.env.MAX_FILE_SIZE_MB, 15) * 1024 * 1024,
     maxFiles: toInteger(process.env.MAX_FILES, 5),
   },
+  storage: {
+    dir: process.env.STORAGE_DIR || 'storage',
+  },
 };
 
 module.exports = config;

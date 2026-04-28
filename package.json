@@ -10,7 +10,8 @@
     "start:dev": "node scripts/run-with-env.js .env.development node src/index.js",
     "start:stage": "node scripts/run-with-env.js .env.stage node src/index.js",
     "start:prod": "node scripts/run-with-env.js .env.production node src/index.js",
-    "dev:env": "node scripts/run-with-env.js .env.development node --watch src/index.js"
+    "dev:env": "node scripts/run-with-env.js .env.development node --watch src/index.js",
+    "test": "node --test"
   },
   "dependencies": {
     "cors": "^2.8.5",
