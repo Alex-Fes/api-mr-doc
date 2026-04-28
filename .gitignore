@@ -5,4 +5,4 @@ npm-debug.log*
 
 .env.stage
 .env.production
-storage/
+/storage/
