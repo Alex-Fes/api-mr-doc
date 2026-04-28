@@ -1,9 +1,13 @@
 const express = require('express');
 const multer = require('multer');
+const path = require('node:path');
 const config = require('../config');
 const { sendSubmissionEmail } = require('../email/sendMail');
+const { createDatabase } = require('../storage/database');
+const { processSubmission } = require('../submissions/processSubmission');
 
 const router = express.Router();
+const database = createDatabase(path.join(config.storage.dir, 'data.sqlite'));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -83,7 +87,13 @@ router.post('/send-email', parseMultipartIfNeeded, async (req, res) => {
   }
 
   try {
-    await sendSubmissionEmail(submission, req.files || []);
+    await processSubmission({
+      submission,
+      files: req.files || [],
+      config,
+      database,
+      sendSubmissionEmail,
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Email send failed:', error);
