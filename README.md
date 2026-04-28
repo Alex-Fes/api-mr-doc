@@ -43,9 +43,12 @@ MAIL_FROM=mailer@example.ru
 MAIL_TO=clinic@example.ru
 MAX_FILE_SIZE_MB=15
 MAX_FILES=5
+STORAGE_DIR=storage
 ```
 
 `MAIL_FROM` should usually match `SMTP_USER`, otherwise some SMTP providers reject the message.
+
+`STORAGE_DIR` is used for permanent local upload storage. Uploaded files are saved on the VPS disk and email notifications include links to those files instead of SMTP attachments.
 
 ## Commands
 
@@ -78,6 +81,34 @@ Fields:
 - `files`: optional multipart attachments
 
 At least `phone` or `reviewText` must be present.
+
+Uploaded files are stored permanently under `STORAGE_DIR/files/`, and metadata is stored in `STORAGE_DIR/data.sqlite`. Email file links use `API_URL` and have this shape:
+
+```text
+https://api.mr-doc.ru/files/<token>
+https://api-mr-doc.univpro.ru/files/<token>
+```
+
+There is no `/api` segment in file links.
+
+### `GET /files/:token`
+
+Downloads a stored uploaded file by its unguessable token.
+
+Returns `404` when the token is unknown or the file is missing on disk.
+
+Do not expose `STORAGE_DIR` directly through nginx or `express.static`; file access should go through this endpoint.
+
+## Upload Storage and Backups
+
+Uploaded files are permanent clinic data. Back up both:
+
+```text
+storage/data.sqlite
+storage/files/
+```
+
+The application does not auto-delete uploaded files.
 
 ## Deployment Behind nginx
 
@@ -131,3 +162,5 @@ server {
     }
 }
 ```
+
+Keep `client_max_body_size` greater than or equal to the configured upload limits.
