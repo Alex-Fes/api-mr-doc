@@ -112,6 +112,8 @@ The application does not auto-delete uploaded files.
 
 ## Deployment Behind nginx
 
+Russian server runbook: [docs/deploy-ru.md](docs/deploy-ru.md).
+
 The same branch is used for both staging and production. Only the chosen env file and command change.
 
 ### Staging
