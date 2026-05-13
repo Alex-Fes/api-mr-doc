@@ -21,8 +21,8 @@
 Рекомендуемая схема портов для одного VPS: наружу смотрит только nginx на `80/443`, а Node.js-приложения слушают локальные порты на `127.0.0.1`. Для этого проекта используем диапазон `3000-3099`.
 
 ```text
-/var/www/dental-mail-stage      PORT=3001, STORAGE_DIR=storage
-/var/www/dental-mail-production PORT=3003, STORAGE_DIR=storage
+/var/www/node-apps/api-mr-doc-stage      PORT=3001, STORAGE_DIR=storage
+/var/www/node-apps/api-mr-doc-production PORT=3003, STORAGE_DIR=storage
 ```
 
 Так stage и production не делят SQLite-базу и загруженные файлы.
@@ -54,19 +54,19 @@ sudo npm install -g pm2
 Для stage:
 
 ```bash
-sudo mkdir -p /var/www/dental-mail-stage
-sudo chown -R "$USER":"$USER" /var/www/dental-mail-stage
-git clone <repo-url> /var/www/dental-mail-stage
-cd /var/www/dental-mail-stage
+sudo mkdir -p /var/www/node-apps/api-mr-doc-stage
+sudo chown -R "$USER":"$USER" /var/www/node-apps/api-mr-doc-stage
+git clone <repo-url> /var/www/node-apps/api-mr-doc-stage
+cd /var/www/node-apps/api-mr-doc-stage
 ```
 
 Для production на том же VPS:
 
 ```bash
-sudo mkdir -p /var/www/dental-mail-production
-sudo chown -R "$USER":"$USER" /var/www/dental-mail-production
-git clone <repo-url> /var/www/dental-mail-production
-cd /var/www/dental-mail-production
+sudo mkdir -p /var/www/node-apps/api-mr-doc-production
+sudo chown -R "$USER":"$USER" /var/www/node-apps/api-mr-doc-production
+git clone <repo-url> /var/www/node-apps/api-mr-doc-production
+cd /var/www/node-apps/api-mr-doc-production
 ```
 
 Если код уже загружен без git, просто перейти в директорию проекта.
@@ -76,7 +76,7 @@ cd /var/www/dental-mail-production
 Открыть stage env:
 
 ```bash
-cd /var/www/dental-mail-stage
+cd /var/www/node-apps/api-mr-doc-stage
 nano .env.stage
 ```
 
@@ -109,7 +109,7 @@ STORAGE_DIR=storage
 Открыть production env:
 
 ```bash
-cd /var/www/dental-mail-production
+cd /var/www/node-apps/api-mr-doc-production
 nano .env.production
 ```
 
@@ -162,23 +162,23 @@ mkdir -p storage/files
 Stage:
 
 ```bash
-cd /var/www/dental-mail-stage
-pm2 start npm --name dental-mail-stage -- run start:stage
+cd /var/www/node-apps/api-mr-doc-stage
+pm2 start npm --name api-mr-doc-stage -- run start:stage
 ```
 
 Production:
 
 ```bash
-cd /var/www/dental-mail-production
-pm2 start npm --name dental-mail-production -- run start:prod
+cd /var/www/node-apps/api-mr-doc-production
+pm2 start npm --name api-mr-doc-production -- run start:prod
 ```
 
 Проверить процессы:
 
 ```bash
 pm2 list
-pm2 logs dental-mail-stage
-pm2 logs dental-mail-production
+pm2 logs api-mr-doc-stage
+pm2 logs api-mr-doc-production
 ```
 
 Сохранить автозапуск:
@@ -514,20 +514,20 @@ curl https://api.mr-doc.ru/health
 Stage:
 
 ```bash
-cd /var/www/dental-mail-stage
+cd /var/www/node-apps/api-mr-doc-stage
 git pull
 npm ci --omit=dev
-pm2 restart dental-mail-stage
+pm2 restart api-mr-doc-stage
 curl https://api-mr-doc.univpro.ru/health
 ```
 
 Production:
 
 ```bash
-cd /var/www/dental-mail-production
+cd /var/www/node-apps/api-mr-doc-production
 git pull
 npm ci --omit=dev
-pm2 restart dental-mail-production
+pm2 restart api-mr-doc-production
 curl https://api.mr-doc.ru/health
 ```
 
@@ -551,8 +551,8 @@ storage/files/
 Минимальный ручной бэкап:
 
 ```bash
-cd /var/www/dental-mail-production
-tar -czf dental-mail-storage-$(date +%F).tar.gz storage
+cd /var/www/node-apps/api-mr-doc-production
+tar -czf api-mr-doc-storage-$(date +%F).tar.gz storage
 ```
 
 Для production лучше настроить регулярный бэкап на внешний диск, S3-compatible storage или backup-сервис хостинга.
@@ -568,8 +568,8 @@ pm2 list
 Посмотреть логи:
 
 ```bash
-pm2 logs dental-mail-stage
-pm2 logs dental-mail-production
+pm2 logs api-mr-doc-stage
+pm2 logs api-mr-doc-production
 ```
 
 Проверить nginx:
