@@ -21,11 +21,35 @@
 Рекомендуемая схема портов для одного VPS: наружу смотрит только nginx на `80/443`, а Node.js-приложения слушают локальные порты на `127.0.0.1`. Для этого проекта используем диапазон `3000-3099`.
 
 ```text
-/var/www/node-apps/api-mr-doc-stage      PORT=3001, STORAGE_DIR=storage
-/var/www/node-apps/api-mr-doc-production PORT=3003, STORAGE_DIR=storage
+/var/www/node-apps/api-mr-doc            stage,      PORT=3002, PM2=mr-doc-api
+/var/www/node-apps/api-mr-doc-production production, PORT=3003, PM2=api-mr-doc-production
 ```
 
 Так stage и production не делят SQLite-базу и загруженные файлы.
+
+На текущем VPS порт `3001` занят frontend/Next.js stage-процессом. Поэтому backend stage не должен запускаться на `3001`: при таком конфликте PM2-лог покажет `EADDRINUSE: address already in use :::3001`, а nginx будет отдавать `502 Bad Gateway`.
+
+Короткий справочник по текущим именам:
+
+```text
+Stage backend:
+  project dir:  /var/www/node-apps/api-mr-doc
+  env file:     /var/www/node-apps/api-mr-doc/.env.stage
+  PM2 process:  mr-doc-api
+  local health: http://127.0.0.1:3002/health
+  public health: https://api-mr-doc.univpro.ru/health
+  nginx file:   /etc/nginx/sites-available/api-mr-doc
+  nginx link:   /etc/nginx/sites-enabled/api-mr-doc
+
+Production backend:
+  project dir:  /var/www/node-apps/api-mr-doc-production
+  env file:     /var/www/node-apps/api-mr-doc-production/.env.production
+  PM2 process:  api-mr-doc-production
+  local health: http://127.0.0.1:3003/health
+  public health: https://api.mr-doc.ru/health
+  nginx file:   /etc/nginx/sites-available/api-mr-doc-production
+  nginx link:   /etc/nginx/sites-enabled/api-mr-doc-production
+```
 
 ## 1. Подготовить сервер
 
@@ -54,10 +78,10 @@ sudo npm install -g pm2
 Для stage:
 
 ```bash
-sudo mkdir -p /var/www/node-apps/api-mr-doc-stage
-sudo chown -R "$USER":"$USER" /var/www/node-apps/api-mr-doc-stage
-git clone <repo-url> /var/www/node-apps/api-mr-doc-stage
-cd /var/www/node-apps/api-mr-doc-stage
+sudo mkdir -p /var/www/node-apps/api-mr-doc
+sudo chown -R "$USER":"$USER" /var/www/node-apps/api-mr-doc
+git clone <repo-url> /var/www/node-apps/api-mr-doc
+cd /var/www/node-apps/api-mr-doc
 ```
 
 Для production на том же VPS:
@@ -76,14 +100,14 @@ cd /var/www/node-apps/api-mr-doc-production
 Открыть stage env:
 
 ```bash
-cd /var/www/node-apps/api-mr-doc-stage
+cd /var/www/node-apps/api-mr-doc
 nano .env.stage
 ```
 
 Минимальный набор значений:
 
 ```dotenv
-PORT=3001
+PORT=3002
 NODE_ENV=production
 FRONTEND_URL=https://mr-doc.univpro.ru
 API_URL=https://api-mr-doc.univpro.ru
@@ -162,8 +186,8 @@ mkdir -p storage/files
 Stage:
 
 ```bash
-cd /var/www/node-apps/api-mr-doc-stage
-pm2 start npm --name api-mr-doc-stage -- run start:stage
+cd /var/www/node-apps/api-mr-doc
+pm2 start npm --name mr-doc-api -- run start:stage
 ```
 
 Production:
@@ -177,7 +201,7 @@ pm2 start npm --name api-mr-doc-production -- run start:prod
 
 ```bash
 pm2 list
-pm2 logs api-mr-doc-stage
+pm2 logs mr-doc-api
 pm2 logs api-mr-doc-production
 ```
 
@@ -195,7 +219,7 @@ pm2 startup
 Создать конфиг:
 
 ```bash
-sudo nano /etc/nginx/sites-available/api-mr-doc-stage
+sudo nano /etc/nginx/sites-available/api-mr-doc
 ```
 
 Содержимое до выпуска HTTPS-сертификата:
@@ -213,7 +237,7 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
@@ -225,15 +249,15 @@ server {
         proxy_send_timeout 300s;
     }
 
-    access_log /var/log/nginx/api-mr-doc-stage.access.log;
-    error_log /var/log/nginx/api-mr-doc-stage.error.log;
+    access_log /var/log/nginx/api-mr-doc.access.log;
+    error_log /var/log/nginx/api-mr-doc.error.log;
 }
 ```
 
 Включить сайт:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/api-mr-doc-stage /etc/nginx/sites-enabled/api-mr-doc-stage
+sudo ln -s /etc/nginx/sites-available/api-mr-doc /etc/nginx/sites-enabled/api-mr-doc
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -319,7 +343,7 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
@@ -331,8 +355,8 @@ server {
         proxy_send_timeout 300s;
     }
 
-    access_log /var/log/nginx/api-mr-doc-stage.access.log;
-    error_log /var/log/nginx/api-mr-doc-stage.error.log;
+    access_log /var/log/nginx/api-mr-doc.access.log;
+    error_log /var/log/nginx/api-mr-doc.error.log;
 
     listen [::]:443 ssl; # managed by Certbot
     listen 443 ssl; # managed by Certbot
@@ -485,7 +509,7 @@ curl -I https://mr-doc.ru
 Проверить локально на сервере:
 
 ```bash
-curl http://127.0.0.1:3001/health
+curl http://127.0.0.1:3002/health
 curl http://127.0.0.1:3003/health
 ```
 
@@ -511,13 +535,16 @@ curl https://api.mr-doc.ru/health
 
 ## 12. Как обновлять backend
 
+### Обновить код проекта
+
 Stage:
 
 ```bash
-cd /var/www/node-apps/api-mr-doc-stage
+cd /var/www/node-apps/api-mr-doc
 git pull
 npm ci --omit=dev
-pm2 restart api-mr-doc-stage
+pm2 restart mr-doc-api --update-env
+curl http://127.0.0.1:3002/health
 curl https://api-mr-doc.univpro.ru/health
 ```
 
@@ -527,8 +554,62 @@ Production:
 cd /var/www/node-apps/api-mr-doc-production
 git pull
 npm ci --omit=dev
-pm2 restart api-mr-doc-production
+pm2 restart api-mr-doc-production --update-env
+curl http://127.0.0.1:3003/health
 curl https://api.mr-doc.ru/health
+```
+
+`--update-env` нужен, если менялись `.env.stage`, `.env.production` или окружение shell. Без него PM2 может перезапустить процесс со старыми переменными.
+
+### Обновить env-файлы
+
+Stage:
+
+```bash
+cd /var/www/node-apps/api-mr-doc
+nano .env.stage
+pm2 restart mr-doc-api --update-env
+pm2 logs mr-doc-api --lines 50
+curl http://127.0.0.1:3002/health
+curl https://api-mr-doc.univpro.ru/health
+```
+
+Production:
+
+```bash
+cd /var/www/node-apps/api-mr-doc-production
+nano .env.production
+pm2 restart api-mr-doc-production --update-env
+pm2 logs api-mr-doc-production --lines 50
+curl http://127.0.0.1:3003/health
+curl https://api.mr-doc.ru/health
+```
+
+### Обновить nginx-конфиг
+
+Stage API:
+
+```bash
+nano /etc/nginx/sites-available/api-mr-doc
+nginx -t
+systemctl reload nginx
+curl https://api-mr-doc.univpro.ru/health
+```
+
+Production API:
+
+```bash
+nano /etc/nginx/sites-available/api-mr-doc-production
+nginx -t
+systemctl reload nginx
+curl https://api.mr-doc.ru/health
+```
+
+Если сомневаешься, какой файл nginx реально подключен, проверить symlink:
+
+```bash
+readlink -f /etc/nginx/sites-enabled/api-mr-doc
+readlink -f /etc/nginx/sites-enabled/api-mr-doc-production
 ```
 
 Порядок обновления лучше такой:
@@ -568,7 +649,7 @@ pm2 list
 Посмотреть логи:
 
 ```bash
-pm2 logs api-mr-doc-stage
+pm2 logs mr-doc-api
 pm2 logs api-mr-doc-production
 ```
 
@@ -587,3 +668,5 @@ sudo systemctl status nginx
 - Ссылки на файлы ведут не туда - неверный `API_URL`.
 - 413 от nginx - увеличить `client_max_body_size`.
 - Файл не скачивается - проверить, что `storage/data.sqlite` и `storage/files/` принадлежат пользователю, от которого запущен PM2-процесс.
+- `EADDRINUSE: address already in use :::3001` - backend пытается занять порт frontend/Next.js. Для текущего stage backend использовать `PORT=3002` и `proxy_pass http://127.0.0.1:3002;`.
+- `502 Bad Gateway` на `api-mr-doc.univpro.ru`, когда локальный `curl http://127.0.0.1:3002/health` работает - nginx смотрит не на тот порт. Проверить `/etc/nginx/sites-available/api-mr-doc`.
